@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#120f26">
+<title>AR-Bauanleitung · Schulhaus HTL Wolfsberg</title>
+<style>
+@font-face{font-family:"BC";font-weight:800;src:url(fonts/BarlowCondensed-ExtraBold.ttf)}
+@font-face{font-family:"BC";font-weight:700;src:url(fonts/BarlowCondensed-Bold.ttf)}
+@font-face{font-family:"B";font-weight:400;src:url(fonts/Barlow-Regular.ttf)}
+@font-face{font-family:"B";font-weight:600;src:url(fonts/Barlow-SemiBold.ttf)}
+:root{--bg:#120f26;--card:#1c1838;--line:#3b3570;--or:#ff5b1f;--ye:#ffc93c;--lav:#cfcaf0;--mut:#9a92d6}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:#fff;font-family:"B",system-ui,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#stage{position:fixed;inset:0}
+#stage video,#stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#stage video{display:none}
+.top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(#120f26ee,#120f2600);pointer-events:none}
+.brand{font-family:"BC";font-weight:800;font-size:20px;letter-spacing:.5px;line-height:1}
+.brand small{display:block;font-weight:700;font-size:12px;letter-spacing:2.5px;color:var(--or)}
+.pill{pointer-events:auto;font-family:"BC";font-weight:700;font-size:14px;letter-spacing:.5px;padding:6px 11px;border-radius:999px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;gap:7px}
+.dot{width:9px;height:9px;border-radius:50%;background:#777}
+.pill.ok .dot{background:#4ade80}.pill.search .dot{background:var(--ye);animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.25}}
+.panel{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);background:#1c1838f2;border:1px solid var(--line);border-radius:14px;padding:12px 14px 12px;display:flex;flex-direction:column;gap:8px;max-width:560px;margin:0 auto}
+.hd{display:flex;align-items:center;gap:10px}
+.num{flex:none;width:32px;height:32px;border-radius:16px;background:var(--or);display:flex;align-items:center;justify-content:center;font-family:"BC";font-weight:800;font-size:19px}
+.tt{font-family:"BC";font-weight:800;font-size:23px;line-height:1;letter-spacing:.3px}
+.tx{margin:0;font-size:14.5px;line-height:1.4;color:#e4e0fa;min-height:40px}
+.tx b{color:var(--ye);font-weight:600}
+.nav{display:flex;align-items:center;gap:10px}
+.nav button{flex:none;min-width:48px;height:46px;border-radius:10px;border:1px solid var(--line);background:#2a2550;color:#fff;font-family:"BC";font-weight:800;font-size:20px}
+.nav button:disabled{opacity:.35}
+.nav button.go{flex:1;background:var(--or);border-color:var(--or)}
+.dots{display:flex;gap:5px;justify-content:center;flex:1}
+.dots i{width:8px;height:8px;border-radius:4px;background:var(--line)}
+.dots i.on{background:var(--or);width:20px}
+#start{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:28px;background:var(--bg)}
+#start h1{margin:0;font-family:"BC";font-weight:800;font-size:46px;line-height:.95}
+#start h1 span{color:var(--ye)}
+#start p{margin:0;font-size:15px;line-height:1.45;color:var(--lav)}
+#start .eb{font-family:"BC";font-weight:700;font-size:15px;letter-spacing:3px;color:var(--or)}
+#start button{height:54px;border-radius:12px;border:0;font-family:"BC";font-weight:800;font-size:21px;letter-spacing:.5px;color:#fff;background:var(--or)}
+#start button.sec{background:var(--card);border:1px solid var(--line)}
+#start svg{width:100%;height:46px}
+#msg{color:#ff8a8a;font-size:14px;min-height:18px}
+.hint{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;font-family:"BC";font-weight:700;font-size:19px;line-height:1.2;padding:12px 16px;border-radius:12px;background:#120f26cc;border:1px solid var(--line);pointer-events:none;max-width:80vw}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="stage"><video id="video" playsinline muted autoplay></video></div>
+
+<div class="top hidden" id="top">
+  <div class="brand"><small>AR-BAUANLEITUNG</small>SCHULHAUS HTL</div>
+  <div class="pill search" id="status"><span class="dot"></span><span id="statusTx">Rahmen suchen …</span></div>
+</div>
+<div class="hint hidden" id="hint">Richte die Kamera auf den<br>leeren Rahmen – beide Muster im Bild</div>
+
+<div class="panel hidden" id="panel">
+  <div class="hd"><span class="num" id="stepNum">0</span><span class="tt" id="stepTitle"></span></div>
+  <p class="tx" id="stepText"></p>
+  <div class="nav">
+    <button id="prev" aria-label="Zurück">‹</button>
+    <div class="dots" id="dots"></div>
+    <button id="replay" aria-label="Animation wiederholen">↻</button>
+    <button id="next" class="go" aria-label="Weiter">WEITER ›</button>
+  </div>
+</div>
+
+<div id="start">
+  <div class="eb">KIT 01 · WEIHNACHTEN 2026</div>
+  <h1>BAU DEIN<br><span>SCHULHAUS!</span></h1>
+  <svg aria-hidden="true" viewBox="0 0 1600 80" preserveAspectRatio="none"><path d="M0,40 L260,40 L275,30 L285,40 L300,40 L312,4 L326,72 L338,40 L380,40 L392,32 L404,40 L700,40 L712,34 L722,40 L740,40 L752,8 L766,70 L778,40 L1600,40" fill="none" stroke="#ff5b1f" stroke-width="4"/></svg>
+  <p>Leg den <b style="color:#ffc93c">leeren Rahmen</b> flach auf den Tisch und richte die Kamera darauf. Die Teile zeigen dir dann direkt am Rahmen, wohin sie gehören.</p>
+  <button id="btnAR">AR STARTEN</button>
+  <button id="btn3D" class="sec">3D-ANSICHT OHNE KAMERA</button>
+  <div id="msg"></div>
+  <p style="font-size:12px;color:#9a92d6">HTL Wolfsberg · innovation alive</p>
+</div>
+
+<script src="lib/cv.js"></script>
+<script src="lib/svd.js"></script>
+<script src="lib/aruco.js"></script>
+<script src="lib/posit1.js"></script>
+<script type="importmap">{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/addons/"}}</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

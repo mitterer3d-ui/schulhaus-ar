@@ -1,0 +1,23 @@
+AR-Bauanleitung „Schulhaus HTL“ – HTL Wolfsberg
+================================================
+Statische Web-App (keine Installation, kein Server-Code). Der Ordner wird 1:1 auf einen Webserver kopiert.
+
+WICHTIG: Die Kamera funktioniert im Handy-Browser nur über HTTPS.
+  Geeignet: Schul-Webserver (https), GitHub Pages, Netlify Drop o. ä.
+  Lokal testen: im Ordner „python3 -m http.server“ starten und am PC http://localhost:8000 öffnen
+  (localhost gilt als sicher; die 3D-Ansicht funktioniert überall).
+
+BEDIENUNG
+  1. Leeren Kit-Card-Rahmen flach hinlegen (beide quadratischen Muster im Etikettenfeld sichtbar).
+  2. Seite öffnen → „AR STARTEN“ → Kamera erlauben → auf den Rahmen richten.
+  3. Mit „WEITER“ durch die Schritte; ↻ wiederholt die Animation.
+
+TECHNIK
+  Tracking: ArUco-Marker (Wörterbuch MIP 36h12, ID 7 links, ID 11 rechts, 24 mm) – js-aruco2 (MIT)
+  3D: three.js r187 (MIT). Modell: model.js (GLB als base64), Platzierungen: schulhaus.json
+  Brennweite der Handykamera: Standard 0,78 × lange Bildseite. Liegen die Teile sichtbar daneben,
+  mit ?f=0.7 oder ?f=0.9 an der Adresse nachjustieren.
+  Weitere Parameter: ?mode=3d (direkt 3D-Ansicht), ?step=3 (bei Schritt 3 beginnen)
+
+TIPPS FÜR DIE ERKENNUNG
+  Mattes Filament (glänzendes PLA spiegelt), gleichmäßiges Licht, Marker nicht verdecken.
