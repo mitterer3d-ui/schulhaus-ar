@@ -161,7 +161,7 @@ async function startAR() {
   $('msg').textContent = '';
   if (!navigator.mediaDevices?.getUserMedia) { $('msg').textContent = 'Kamera nicht verfügbar – Seite muss über https geöffnet werden.'; return; }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } } });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
     video.srcObject = stream; await video.play();
   } catch (e) {
     $('msg').textContent = window.self !== window.top
@@ -207,6 +207,7 @@ function track(now) {
     }
     const e = FP.estimate(src, dst, f);
     if (e && e.err < 4 && e.t[2] > 0) {
+      lastPose = e;
       const R = e.R, t = e.t;                                    // Kamera (x rechts, y unten, z vor) -> three.js (y oben, z zurück)
       const M = new THREE.Matrix4().set(
         R[0][0], R[0][1], R[0][2], t[0],
@@ -225,6 +226,10 @@ function track(now) {
     }
   }
   camera.fov = 2 * Math.atan(h / 2 / f) * 180 / Math.PI; camera.aspect = w / h; camera.updateProjectionMatrix();
+  // Kamera hat Auflösung/Seitenverhältnis gewechselt? -> Zeichenfläche sofort anpassen
+  const cv = renderer.domElement;
+  if (Math.abs(cv.width / cv.height - vw / vh) > 0.01) resize();
+  if (DEBUG) drawDebug(found, w, h, f);
   if (have) world.matrix.compose(curP, curQ, new THREE.Vector3(1, 1, 1));
   const visible = have && now - lastSeen < 900;
   world.visible = visible; $('hint').classList.toggle('hidden', visible);
@@ -232,6 +237,30 @@ function track(now) {
   $('statusTx').textContent = visible ? (found.length >= 2 ? 'Rahmen erkannt' : 'Rahmen erkannt (1 Marker)') : 'Rahmen suchen …';
 }
 
+
+// ---------- Diagnose (?debug=1) ----------
+const DEBUG = q.get('debug') === '1';
+let dbgCv = null, dbgTx = null, lastPose = null;
+if (DEBUG) {
+  dbgCv = document.createElement('canvas'); dbgCv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none';
+  stage.appendChild(dbgCv);
+  dbgTx = document.createElement('div'); dbgTx.style.cssText = 'position:fixed;left:8px;top:calc(env(safe-area-inset-top) + 64px);font:12px/1.3 monospace;color:#0f0;background:#000a;padding:4px 6px;border-radius:4px;z-index:9;white-space:pre';
+  document.body.appendChild(dbgTx);
+}
+function drawDebug(found, w, h, f) {
+  if (dbgCv.width !== w || dbgCv.height !== h) { dbgCv.width = w; dbgCv.height = h; }
+  const g = dbgCv.getContext('2d'); g.clearRect(0, 0, w, h); g.lineWidth = 2;
+  g.strokeStyle = '#00ff66';
+  for (const mk of found) { g.beginPath(); mk.corners.forEach((c, i) => (i ? g.lineTo(c.x, c.y) : g.moveTo(c.x, c.y))); g.closePath(); g.stroke(); }
+  if (lastPose) {
+    const [CW, CH] = DATA.card, P = (X) => { const p = FP.project(lastPose.R, lastPose.t, f, X); return [p[0] + w / 2, p[1] + h / 2]; };
+    g.strokeStyle = '#ff8800'; g.beginPath();
+    [[-CW / 2, -CH / 2], [CW / 2, -CH / 2], [CW / 2, CH / 2], [-CW / 2, CH / 2]].forEach((X, i) => { const p = P(X); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); });
+    g.closePath(); g.stroke();
+  }
+  const cv = renderer.domElement, v = video;
+  dbgTx.textContent = `Video ${v.videoWidth}×${v.videoHeight}  Canvas ${cv.width}×${cv.height}\nErkennung ${w}×${h}  f=${(f / Math.max(w, h)).toFixed(3)} (${fSamples.length} Messungen)\nMarker ${found.map((m) => m.id).join(',') || '–'}  Fehler ${lastPose ? lastPose.err.toFixed(2) : '–'} px`;
+}
 // ---------- Größe & Schleife ----------
 function resize() {
   if (mode === 'ar' && video.videoWidth) {
@@ -241,7 +270,7 @@ function resize() {
     renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.fov = 45; camera.updateProjectionMatrix();
   }
 }
-addEventListener('resize', resize); video.addEventListener('loadedmetadata', resize);
+addEventListener('resize', resize); video.addEventListener('loadedmetadata', resize); video.addEventListener('resize', resize);
 renderer.setAnimationLoop((now) => {
   if (mode === 'ar') track(now);
   if (controls) controls.update();
