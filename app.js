@@ -8,7 +8,7 @@ import MODEL64 from './model.js';
 
 const q = new URLSearchParams(location.search);
 const FOCAL = parseFloat(q.get('f') || '0.78');     // Brennweite relativ zur langen Bildseite
-const DET_MAX = 640;
+const DET_MAX = 800;
 const INIT = +(q.get('step') || 0);                                 // Auflösung für die Markererkennung
 const Z_OFF = 2.4;                                   // Haus steht auf dem Rahmen (Rahmenstärke + Luft)
 const HOUSE_X = -11;                                 // Hausmitte auf der Bodenplatte (Teelicht)
@@ -174,41 +174,62 @@ async function startAR() {
   resize(); showStep(INIT);
 }
 
-function poseFromMarker(mk, w, h, f) {
-  const pts = mk.corners.map((c) => ({ x: c.x - w / 2, y: -(c.y - h / 2) }));
-  const pose = new POS.Posit(DATA.marker_size, f).pose(pts);
-  const R = pose.bestRotation, T = pose.bestTranslation;
-  const M = new THREE.Matrix4().set(
-    R[0][0], R[0][1], -R[0][2], T[0],
-    R[1][0], R[1][1], -R[1][2], T[1],
-    -R[2][0], -R[2][1], R[2][2], -T[2],
-    0, 0, 0, 1);
-  const [cx, cy] = DATA.markers[mk.id];
-  return M.multiply(new THREE.Matrix4().makeTranslation(-cx, -cy, 0));
+// Alle erkannten Markerecken gemeinsam -> eine Rahmen-Pose (Homographie + Gauss-Newton, siehe pose.js)
+const FP = window.FRAMEPOSE;
+const FIXED_F = q.get('f') ? parseFloat(q.get('f')) : null;
+const fSamples = [];
+const mkFilters = () => [[0, 1, 2].map(() => FP.OneEuro(1.0, 0.01)), [0, 1, 2, 3].map(() => FP.OneEuro(1.0, 1.5))];
+let [fltP, fltQ] = mkFilters();
+let prevQ = null;
+function focal(w, h) {
+  const L = Math.max(w, h);
+  if (FIXED_F) return FIXED_F * L;
+  if (fSamples.length < 8) return FOCAL * L;
+  const s = [...fSamples].sort((a, b) => a - b); return s[s.length >> 1] * L;
+}
+function cornersOf(mk) {                  // Ecken des Markers in Rahmen-Koordinaten (mm): oben links, oben rechts, unten rechts, unten links
+  const [cx, cy] = DATA.markers[mk.id], h = DATA.marker_size / 2;
+  return [[cx - h, cy + h], [cx + h, cy + h], [cx + h, cy - h], [cx - h, cy - h]];
 }
 function track(now) {
   const vw = video.videoWidth, vh = video.videoHeight; if (!vw) return;
   const s = DET_MAX / Math.max(vw, vh), w = Math.round(vw * s), h = Math.round(vh * s);
   if (dc.width !== w) { dc.width = w; dc.height = h; }
   dctx.drawImage(video, 0, 0, w, h);
-  const f = FOCAL * Math.max(w, h);
-  camera.fov = 2 * Math.atan(h / 2 / f) * 180 / Math.PI; camera.aspect = w / h; camera.updateProjectionMatrix();
-  const found = det.detect(dctx.getImageData(0, 0, w, h)).filter((m) => DATA.markers[m.id]);
+  const found = det.detect(dctx.getImageData(0, 0, w, h)).filter((m) => DATA.markers[m.id] && m.hammingDistance <= 2);
+  let f = focal(w, h);
   if (found.length) {
-    const ps = [], qs = [];
-    for (const mk of found) {
-      const M = poseFromMarker(mk, w, h, f), p = new THREE.Vector3(), r = new THREE.Quaternion(), sc = new THREE.Vector3();
-      M.decompose(p, r, sc); ps.push(p); qs.push(r);
+    const src = [], dst = [];
+    for (const mk of found) { src.push(...cornersOf(mk)); dst.push(...mk.corners.map((c) => [c.x - w / 2, c.y - h / 2])); }
+    if (found.length >= 2 && !FIXED_F) {                       // Brennweite laufend mitmessen
+      const fe = FP.focalFromH(FP.homography(src, dst)), L = Math.max(w, h);
+      if (fe && fe > 0.45 * L && fe < 1.6 * L) { fSamples.push(fe / L); if (fSamples.length > 60) fSamples.shift(); f = focal(w, h); }
     }
-    tgtP.copy(ps[0]); tgtQ.copy(qs[0]);
-    if (ps.length > 1) { tgtP.lerp(ps[1], 0.5); tgtQ.slerp(qs[1], 0.5); }
-    if (!have || curP.distanceTo(tgtP) > 80) { curP.copy(tgtP); curQ.copy(tgtQ); }
-    have = true; lastSeen = now;
+    const e = FP.estimate(src, dst, f);
+    if (e && e.err < 4 && e.t[2] > 0) {
+      const R = e.R, t = e.t;                                    // Kamera (x rechts, y unten, z vor) -> three.js (y oben, z zurück)
+      const M = new THREE.Matrix4().set(
+        R[0][0], R[0][1], R[0][2], t[0],
+        -R[1][0], -R[1][1], -R[1][2], -t[1],
+        -R[2][0], -R[2][1], -R[2][2], -t[2],
+        0, 0, 0, 1);
+      M.decompose(tgtP, tgtQ, new THREE.Vector3());
+      if (prevQ && prevQ.dot(tgtQ) < 0) tgtQ.set(-tgtQ.x, -tgtQ.y, -tgtQ.z, -tgtQ.w);
+      prevQ = tgtQ.clone();
+      const jump = !have || now - lastSeen > 900;
+      if (jump) [fltP, fltQ] = mkFilters();      // nach Verlust neu einrasten statt hinterherziehen
+      curP.set(...[0, 1, 2].map((k) => fltP[k](tgtP.getComponent(k), now)));
+      const qa = [tgtQ.x, tgtQ.y, tgtQ.z, tgtQ.w].map((v, k) => fltQ[k](v, now));
+      curQ.set(qa[0], qa[1], qa[2], qa[3]).normalize();
+      have = true; lastSeen = now;
+    }
   }
-  if (have) { curP.lerp(tgtP, 0.4); curQ.slerp(tgtQ, 0.4); world.matrix.compose(curP, curQ, new THREE.Vector3(1, 1, 1)); }
+  camera.fov = 2 * Math.atan(h / 2 / f) * 180 / Math.PI; camera.aspect = w / h; camera.updateProjectionMatrix();
+  if (have) world.matrix.compose(curP, curQ, new THREE.Vector3(1, 1, 1));
   const visible = have && now - lastSeen < 900;
   world.visible = visible; $('hint').classList.toggle('hidden', visible);
-  $('status').className = 'pill ' + (visible ? 'ok' : 'search'); $('statusTx').textContent = visible ? 'Rahmen erkannt' : 'Rahmen suchen …';
+  $('status').className = 'pill ' + (visible ? 'ok' : 'search');
+  $('statusTx').textContent = visible ? (found.length >= 2 ? 'Rahmen erkannt' : 'Rahmen erkannt (1 Marker)') : 'Rahmen suchen …';
 }
 
 // ---------- Größe & Schleife ----------
