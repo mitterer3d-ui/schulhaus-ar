@@ -46,6 +46,17 @@ html,body{margin:0;height:100%;background:var(--bg);color:#fff;font-family:"B",s
 #start svg{width:100%;height:46px}
 #msg{color:#ff8a8a;font-size:14px;min-height:18px}
 .hint{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;font-family:"BC";font-weight:700;font-size:19px;line-height:1.2;padding:12px 16px;border-radius:12px;background:#120f26cc;border:1px solid var(--line);pointer-events:none;max-width:80vw}
+.homeb{pointer-events:auto;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:#fff;display:flex;align-items:center;justify-content:center;padding:0}
+.homeb svg{width:22px;height:22px}
+.left{display:flex;align-items:center;gap:10px}
+#links{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:28px;background:var(--bg)}
+#links h2{margin:0 0 6px;font-family:"BC";font-weight:800;font-size:38px;line-height:.95}
+#links h2 span{color:var(--ye)}
+#links a{display:flex;align-items:center;gap:14px;min-height:58px;padding:0 16px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:#fff;text-decoration:none;font-family:"BC";font-weight:800;font-size:21px;letter-spacing:.5px}
+#links a small{display:block;font-family:"B";font-weight:400;font-size:12.5px;letter-spacing:0;color:var(--mut)}
+#links a .ic{flex:none;width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center}
+#links a .ic svg{width:22px;height:22px}
+#links button{height:50px;border-radius:12px;border:1px solid var(--line);background:transparent;color:#fff;font-family:"BC";font-weight:800;font-size:19px;margin-top:6px}
 .hidden{display:none!important}
 </style>
 </head>
@@ -53,7 +64,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:#fff;font-family:"B",s
 <div id="stage"><video id="video" playsinline muted autoplay></video></div>
 
 <div class="top hidden" id="top">
-  <div class="brand"><small>AR-BAUANLEITUNG</small>SCHULHAUS HTL</div>
+  <div class="left"><button class="homeb" id="home" aria-label="Zum Hauptmenü"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg></button><div class="brand"><small>AR-BAUANLEITUNG</small>SCHULHAUS HTL</div></div>
   <div class="pill search" id="status"><span class="dot"></span><span id="statusTx">Rahmen suchen …</span></div>
 </div>
 <div class="hint hidden" id="hint">Richte die Kamera auf den<br>leeren Rahmen – beide Muster im Bild</div>
@@ -76,8 +87,20 @@ html,body{margin:0;height:100%;background:var(--bg);color:#fff;font-family:"B",s
   <p>Leg den <b style="color:#ffc93c">leeren Rahmen</b> flach auf den Tisch und richte die Kamera darauf. Die Teile zeigen dir dann direkt am Rahmen, wohin sie gehören.</p>
   <button id="btnAR">AR STARTEN</button>
   <button id="btn3D" class="sec">3D-ANSICHT OHNE KAMERA</button>
+  <button id="btnLinks" class="sec">HTL WOLFSBERG ONLINE</button>
   <div id="msg"></div>
   <p style="font-size:12px;color:#9a92d6">HTL Wolfsberg · innovation alive</p>
+</div>
+
+
+<div id="links" class="hidden">
+  <div class="eb" style="font-family:'BC';font-weight:700;font-size:15px;letter-spacing:3px;color:var(--or)">HTL WOLFSBERG · INNOVATION ALIVE</div>
+  <h2>FOLG UNS<br><span>ONLINE!</span></h2>
+  <a href="https://www.htl-wolfsberg.at" target="_blank" rel="noopener"><span class="ic" style="background:#ff5b1f"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg></span><span>WEBSEITE<small>htl-wolfsberg.at</small></span></a>
+  <a href="https://www.instagram.com/htlwolfsberg/" target="_blank" rel="noopener"><span class="ic" style="background:#c13584"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.6" fill="#fff"/></svg></span><span>INSTAGRAM<small>@htlwolfsberg</small></span></a>
+  <a href="https://www.facebook.com/HTL-Wolfsberg-239731089923927/" target="_blank" rel="noopener"><span class="ic" style="background:#1877f2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c3 .2 5.5 2.4 5.5 5.8"/></svg></span><span>FACEBOOK<small>HTL Wolfsberg</small></span></a>
+  <a href="https://www.youtube.com/channel/UCWJAmBDgDhy_wX2u3oI34LQ" target="_blank" rel="noopener"><span class="ic" style="background:#e62117"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg></span><span>YOUTUBE<small>HTL Wolfsberg – Official Channel</small></span></a>
+  <button id="linksBack">‹ ZURÜCK ZUM MENÜ</button>
 </div>
 
 <script src="lib/cv.js"></script>

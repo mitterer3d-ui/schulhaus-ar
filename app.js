@@ -248,6 +248,20 @@ renderer.setAnimationLoop((now) => {
   animate(now); renderer.render(scene, camera);
 });
 $('btnAR').onclick = startAR; $('btn3D').onclick = start3D;
+// ---------- Hauptmenü / Links ----------
+function goHome() {
+  if (video.srcObject) { video.srcObject.getTracks().forEach((t) => t.stop()); video.srcObject = null; }
+  video.style.display = 'none';
+  if (controls) { controls.dispose(); controls = null; }
+  mode = null; have = false; world.visible = false; scene.background = null;
+  ['panel', 'top', 'hint', 'links'].forEach((id) => $(id).classList.add('hidden'));
+  $('start').classList.remove('hidden'); $('msg').textContent = '';
+  resize();
+}
+$('home').onclick = goHome;
+$('btnLinks').onclick = () => { $('start').classList.add('hidden'); $('links').classList.remove('hidden'); };
+$('linksBack').onclick = () => { $('links').classList.add('hidden'); $('start').classList.remove('hidden'); };
+
 if (q.get('mode') === '3d') start3D();
 if (q.get('mode') === 'ar') startAR();
 window.__app = { showStep, get step() { return step; } };
